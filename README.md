@@ -54,3 +54,38 @@
 1. **Clone the project:**
    ```bash
    git clone [https://github.com/goatbotnx/GOAT-BOT-V2.git](https://github.com/goatbotnx/GOAT-BOT-V2.git)
+
+ * Install dependencies:
+   npm install
+
+ * Launch the bot:
+   node index.js
+
+🚀 Deployment Notice
+You can deploy GOAT-BOT-V2 on the following platforms:
+ * 🐙 GitHub Actions: Use the Actions tab to automate your bot workflow.
+ * 🌐 Render: Connect repo, set build command to npm install and start command to node index.js.
+ * 🌀 Replit: Import repo and use 'Secrets' to store your credentials.
+ * 🚂 Railway: Best for easy Node.js hosting with automatic deployment.
+> [!WARNING]
+> Privacy Note: Never share your appstate.json or login credentials publicly on GitHub. Use Environment Variables for security.
+> 
+📞 Connect with Me
+<p align="left">
+<a href="https://www.facebook.com/nx210.2.0" target="_blank">
+<img src="https://www.google.com/search?q=https://img.shields.io/badge/Facebook-1877F2%3Fstyle%3Dfor-the-badge%26logo%3Dfacebook%26logoColor%3Dwhite" />
+</a>
+<a href="https://www.google.com/search?q=https://wa.me/8801876118312" target="_blank">
+<img src="https://www.google.com/search?q=https://img.shields.io/badge/WhatsApp-25D366%3Fstyle%3Dfor-the-badge%26logo%3Dwhatsapp%26logoColor%3Dwhite" />
+</a>
+</p>
+ * Facebook Profile: Xalman Hossain
+ * WhatsApp Chat: +880 1876-118312
+<p align="center">
+Copyright © 2026 <b>Xalman Hossain</b>. All rights reserved.
+
+
+<i>Give a ⭐ if this project helped you!</i>
+</p>
+
+-----
