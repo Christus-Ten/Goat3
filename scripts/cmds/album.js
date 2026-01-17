@@ -2,158 +2,123 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 
-const apiJsonUrl = "https://raw.githubusercontent.com/goatbotnx/Sexy-nx2.0Updated/refs/heads/main/nx-apis.json"; // GitHub raw link
-
+const apiJsonUrl = "https://raw.githubusercontent.com/goatbotnx/Sexy-nx2.0Updated/refs/heads/main/nx-apis.json"; 
 const ADMIN_UID = "61583129938292";
 
 module.exports = {
   config: {
     name: "album",
     aliases: ["gallery", "alb"],
-    version: "3.0",
-    author: "xalman",  //don't cng 
+    version: "7.0",
+    author: "xalman", 
     role: 0,
     category: "media",
-    shortDescription: "🌸 Exclusive Album",
-    longDescription: "A premium & unique album experience",
-    guide: "{p}album"
+    shortDescription: "🌸 Dynamic Album with Auto-Unsend",
+    guide: "{p}album [page]"
   },
 
   onStart: async function ({ message, event, args }) {
-    let BASE_API;
-
     try {
       const apiListResponse = await axios.get(apiJsonUrl);
-      const apiList = apiListResponse.data;
-      BASE_API = apiList.album;
-    } catch (err) {
-      console.log(err);
-      return message.reply("⚠️ Error fetching album API from GitHub");
-    }
+      const BASE_API = apiListResponse.data.album;
 
-    const senderID = event.senderID;
+      const catRes = await axios.get(`${BASE_API}/categories`);
+      const allCategories = catRes.data.categories;
 
-    const page1 = ["funny", "sad", "attitude", "bike_car",  "anime", "romantic",  "kissing", "islamic", "love"];
-    const page2 = ["aesthetic", "cartoon", "flower",  "freefire", "football", "cricket", "hot"];
+      if (!allCategories || allCategories.length === 0) {
+        return message.reply("⚠️ No categories found in API.");
+      }
 
-    const fancy = (t) =>
-      t.replace(/[a-z]/g, c =>
-        String.fromCodePoint(0x1d400 + c.charCodeAt(0) - 97)
-      );
+      const itemsPerPage = 6;
+      const totalPages = Math.ceil(allCategories.length / itemsPerPage);
+      let page = parseInt(args[0]) || 1;
 
-    const numStyle = (n) =>
-      String(n).replace(/[0-9]/g, d =>
-        String.fromCodePoint(0x1d7ec + Number(d))
-      );
+      if (page < 1) page = 1;
+      if (page > totalPages) page = totalPages;
 
-    const buildMenu = (list, start) =>
-      list
-        .map(
-          (v, i) =>
-            `✦✨ ${numStyle(start + i)} ┊ ${fancy(v)}`
-        )
-        .join("\n");
+      const startIndex = (page - 1) * itemsPerPage;
+      const currentPageCategories = allCategories.slice(startIndex, startIndex + itemsPerPage);
 
-    if (args[0] === "2") {
-      const text =
-`╔═══════ ✦ 𝐀𝐋𝐁𝐔𝐌 ✦ ═══════╗
-${buildMenu(page2, 1)}
-╚══════════════════════════╝
-📖 Page 2 / 2
-↩ Type: album`;
+      const fancy = (t) => t.replace(/[a-z]/g, c => String.fromCodePoint(0x1d400 + c.charCodeAt(0) - 97));
+      const numStyle = (n) => String(n).replace(/[0-9]/g, d => String.fromCodePoint(0x1d7ec + Number(d)));
 
-      return message.reply(text, (err, info) => {
+      let menuText = `╔═══════ ✦ 𝐀𝐋𝐁𝐔𝐌 ✦ ═══════╗\n`;
+      currentPageCategories.forEach((cat, index) => {
+        menuText += `✦✨ ${numStyle(index + 1)} ┊ ${fancy(cat)}\n`;
+      });
+      menuText += `╚══════════════════════════╝\n`;
+      menuText += `📖 𝐏𝐚𝐠𝐞 ${numStyle(page)} / ${numStyle(totalPages)}\n`;
+      
+      if (page < totalPages) {
+        menuText += `➕ Type: album ${page + 1} for next page`;
+      } else if (totalPages > 1) {
+        menuText += `↩️ Type: album 1 to return to start`;
+      }
+
+      return message.reply(menuText, (err, info) => {
+        // ৬০ সেকেন্ড পর অটো আনসেন্ড করার টাইমার
+        setTimeout(() => {
+            message.unsend(info.messageID);
+        }, 60000);
+
         global.GoatBot.onReply.set(info.messageID, {
           commandName: "album",
-          author: senderID,
-          categories: page2
+          author: event.senderID,
+          categories: currentPageCategories,
+          BASE_API: BASE_API,
+          messageID: info.messageID
         });
       });
+
+    } catch (err) {
+      console.error(err);
+      return message.reply("⚠️ Connection error! Please check if your API is online.");
     }
-
-    const text =
-`╔═══════ ✦ 𝐀𝐋𝐁𝐔𝐌 ✦ ═══════╗
-${buildMenu(page1, 1)}
-╚══════════════════════════╝
-📖 Page 1 / 2
-➕ Type: album 2`;
-
-    return message.reply(text, (err, info) => {
-      global.GoatBot.onReply.set(info.messageID, {
-        commandName: "album",
-        author: senderID,
-        categories: page1
-      });
-    });
   },
 
   onReply: async function ({ message, event, Reply }) {
-    if (event.senderID !== Reply.author)
-      return message.reply("⛔ This menu is not for you");
+    const { author, categories, BASE_API, messageID } = Reply;
+    if (event.senderID !== author) return message.reply("⛔ This menu is not for you.");
 
     const pick = parseInt(event.body);
-    if (isNaN(pick))
-      return message.reply("🔢 Reply with number only");
+    if (isNaN(pick)) return message.reply("🔢 Please reply with a valid number.");
+    if (pick < 1 || pick > categories.length) return message.reply("❌ Invalid selection.");
 
-    const list = Reply.categories;
-    if (pick < 1 || pick > list.length)
-      return message.reply("❌ Invalid choice");
+    // ইউজার রিপ্লাই দেওয়ার সাথে সাথে লিস্টটি আনসেন্ড করে দেওয়া
+    message.unsend(messageID);
 
-    const category = list[pick - 1];
-
-    if (category === "18plus" && event.senderID !== ADMIN_UID)
-      return message.reply("তোরা কি ভালো হইবি না নাকি 👽");
-
-    let BASE_API;
-    try {
-      const apiListResponse = await axios.get(apiJsonUrl);
-      const apiList = apiListResponse.data;
-      BASE_API = apiList.album;
-    } catch (err) {
-      console.log(err);
-      return message.reply("⚠️ Error fetching album API from GitHub");
+    const category = categories[pick - 1];
+    const restricted = ["hot", "horny"];
+    
+    if (restricted.includes(category.toLowerCase()) && event.senderID !== ADMIN_UID) {
+        return message.reply("ছি তুমি এখনো ভালো হলে না 🫢🙏");
     }
 
     try {
-      message.reply("please wait ✨");
+      message.reply(`Please wait... Loading ${category} ✨`);
 
-      const res = await axios.get(
-        `${BASE_API}/album?type=${category}`
-      );
-
+      const res = await axios.get(`${BASE_API}/album?type=${category}`);
       const mediaUrl = res.data.data;
-      if (!mediaUrl)
-        return message.reply("❌ Album empty");
 
-      const ext = mediaUrl.split(".").pop().split("?")[0];
-      const filePath = path.join(
-        __dirname,
-        "cache",
-        `album_${Date.now()}.${ext}`
-      );
+      if (!mediaUrl) return message.reply("❌ No content found for this category.");
 
-      const stream = await axios.get(mediaUrl, {
-        responseType: "stream"
-      });
+      const ext = mediaUrl.split(".").pop().split("?")[0] || "mp4";
+      const filePath = path.join(__dirname, "cache", `album_${Date.now()}.${ext}`);
 
-      stream.data
-        .pipe(fs.createWriteStream(filePath))
-        .on("finish", () => {
-          message.reply(
-            {
-              body:
-`✦ 𝐀𝐋𝐁𝐔𝐌 𝐃𝐄𝐋𝐈𝐕𝐄𝐑𝐄𝐃 ✦
-💖 Category : ${category}
-👑 Owner : XALMAN`,
-              attachment: fs.createReadStream(filePath)
-            },
-            () => fs.unlinkSync(filePath)
-          );
+      const response = await axios({ url: mediaUrl, method: 'GET', responseType: 'stream' });
+      const writer = fs.createWriteStream(filePath);
+      response.data.pipe(writer);
+
+      writer.on("finish", () => {
+        message.reply({
+          body: `✦ 𝐀𝐋𝐁𝐔𝐌 𝐃𝐄𝐋𝐈𝐕𝐄𝐑𝐄𝐃 ✦\n💖 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐲 : ${category}\n👑 𝐎𝐰𝐧𝐞𝐫 : XALMAN`,
+          attachment: fs.createReadStream(filePath)
+        }, () => {
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         });
-
+      });
     } catch (err) {
-      console.log(err);
-      message.reply("⚠️ Album api error");
+      message.reply("⚠️ Failed to download or send media.");
     }
   }
 };
