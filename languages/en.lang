@@ -89,14 +89,14 @@ handlerCheckData.cantCreateThread=Groups with id '%1' cannot be written to the d
 handlerCheckData.cantCreateUser=Users with id '%1' cannot be written to the database!
 
 # bot/handler/handlerEvents.js
-handlerEvents.onlyPrefix=— ℹ️  This just is my prefix. Type %1help to see available all commands.
+handlerEvents.onlyPrefix=— ℹ️ This is my prefix. Type %1help to explore all commands.
 handlerEvents.userBanned=— ⚠️ Access Revoked: You are currently banned.\n» Reason: %1\n» Duration: %2\n» ID: %3
 handlerEvents.threadBanned=— 🚫 Chat Restricted: This group is banned.\n» Reason: %1\n» Expires: %2\n» TID: %3
 handlerEvents.onlyAdminBox=— 🔒 Security: Only group administrators can use the bot here.
 handlerEvents.onlyAdminBot=— 🛡️ System: Access is restricted to bot administrators only.
 handlerEvents.commandNotFound=— 🔍 Unknown Command: "%1" does not exist. Use %2help for a list of commands.
 handlerEvents.commandNotFound2=— 🔍 Not Found: I don't recognize that command. Check %1help for details.
-handlerEvents.commandNotFoundWithSuggestion=— 🤔 Did you mean "%3"? Command couldn't find "%1". Type help for see available all commands.
+handlerEvents.commandNotFoundWithSuggestion=— 🤔 Did you mean "%2"? I couldn't find "%1". Type %3help for more.
 handlerEvents.commandSyntaxError=— 🛠️ Syntax Error: Please refer to %1help %2 for correct usage instructions.
 handlerEvents.onlyAdmin=— 🎖️ Permission Required: The command "%1" is for admins only.
 handlerEvents.onlyAdminToUseOnReply=— 🎖️ Restricted: Only admins can use replies with "%1".
@@ -114,6 +114,7 @@ handlerEvents.errorOccurred6=— ⚡ [ %1 ] Event error during "%2":\n\n%3
 handlerEvents.errorOccurred7=— ⚡ [ %1 ] AnyEvent error during "%2":\n\n%3
 handlerEvents.cannotFindCommandName=— 🧩 Missing Data: Could not find the command name for this reply.
 handlerEvents.cannotFindCommand=— 🧩 Not Located: I can't find "%1" to complete this reply.
+
 
 
 # bot/autoUptime.js
