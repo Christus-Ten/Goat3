@@ -3,81 +3,59 @@ const moment = require("moment-timezone");
 module.exports = {
   config: {
     name: "age",
-    aliases: [],
-    version: "1.1",
-    author: "Amit Max ⚡",
+    version: "4.0.",
+    author: "Amit max//xalman",
     countDown: 5,
     role: 0,
-    shortDescription: "Check age with style",
-    longDescription: "Check your age in years, months, weeks, hours, etc.",
+    shortDescription: "Age Checker",
+    longDescription: "View age stats details.",
     category: "utility",
-    guide: {
-      en: "{pn} [DD-MM-YYYY]"
-    }
+    guide: { en: "{pn} [DD-MM-YYYY]" }
   },
 
   onStart: async function ({ api, event, args, usersData }) {
     const { threadID, messageID, senderID } = event;
 
     if (!args[0]) {
-      return api.sendMessage("⚠️ Please provide your birthdate in DD-MM-YYYY format.\n\nExample: `.age2 18-05-2006`", threadID, messageID);
+      return api.sendMessage("『 SYSTEM-ERROR 』\n\n➤ Please provide DOB (DD-MM-YYYY)\n➤ Example: .age 18-05-2006", threadID, messageID);
     }
 
     const birthDate = moment.tz(args[0], "DD-MM-YYYY", true, "Asia/Dhaka");
-
     if (!birthDate.isValid()) {
-      return api.sendMessage("❌ Invalid date format.\nPlease use DD-MM-YYYY format.", threadID, messageID);
+      return api.sendMessage("❌ FORMAT_INVALID: Use DD-MM-YYYY", threadID, messageID);
     }
 
     const now = moment.tz("Asia/Dhaka");
-    const ageDuration = moment.duration(now.diff(birthDate));
+    const age = moment.duration(now.diff(birthDate));
 
-    const years = ageDuration.years();
-    const months = ageDuration.months();
-    const days = ageDuration.days();
-    const totalDays = now.diff(birthDate, "days");
-    const totalWeeks = Math.floor(totalDays / 7);
-    const totalHours = now.diff(birthDate, "hours");
-    const totalMinutes = now.diff(birthDate, "minutes");
-    const totalSeconds = now.diff(birthDate, "seconds");
+    const Y = age.years();
+    const M = age.months();
+    const D = age.days();
+    const totalDays = Math.floor(now.diff(birthDate, "days"));
+    const totalSecs = Math.floor(now.diff(birthDate, "seconds"));
 
-    // Calculate next birthday
-    const nextBirthday = birthDate.clone().year(now.year());
-    if (nextBirthday.isBefore(now)) {
-      nextBirthday.add(1, 'year');
-    }
-    const daysLeft = nextBirthday.diff(now, 'days');
+    const nextBday = birthDate.clone().year(now.year());
+    if (nextBday.isBefore(now)) nextBday.add(1, 'year');
+    const dLeft = nextBday.diff(now, 'days');
 
-    // Get gender (with fallback)
-    let genderRaw = await usersData.get(senderID, "gender");
-    let gender = (typeof genderRaw === 'string') ? genderRaw.toUpperCase() : "MALE";
+    const ratingArr = ["S-Rank", "A-Rank", "God-Tier", "Legendary", "Elite", "Supreme"];
+    const randomRating = ratingArr[Math.floor(Math.random() * ratingArr.length)];
 
-    const maleRatings = [
-      "10/10 Handsome", "8/10 Cutie", "9/10 Dashing", "7/10 Smart guy",
-      "11/10 Sexy beast", "100/10 Dream boy", "Too hot to rate"
-    ];
+    const response = 
+      `┌───  [ 𝗔𝗚𝗘 𝗗𝗘𝗧𝗘𝗖𝗧𝗢𝗥 ]  ───\n` +
+      `├──────────────────\n` +
+      `│ ✨ 𝗬𝗲𝗮𝗿𝘀: ${Y} \n` +
+      `│ ✨ 𝗠𝗼𝗻𝘁𝗵𝘀: ${M} \n` +
+      `│ ✨ 𝗗𝗮𝘆𝘀: ${D} \n` +
+      `├──────────────────\n` +
+      `│ 📊 𝗧𝗼𝘁𝗮𝗹 𝗟𝗶𝗳𝗲𝘀𝗽𝗮𝗻:\n` +
+      `│ • Days: ${totalDays.toLocaleString()}\n` +
+      `│ • Second: ${totalSecs.toLocaleString()}\n` +
+      `├──────────────────\n` +
+      `│ 🎯 𝗡𝗲𝘅𝘁 𝗘𝘃𝗲𝗻𝘁: ${dLeft} Days Left\n` +
+      `│ 🎖️ 𝗨𝘀𝗲𝗿 𝗥𝗮𝗻𝗸: ${randomRating}\n` +
+      `└──────────────────\n` ;
 
-    const femaleRatings = [
-      "10/10 Beautiful", "9/10 Pretty", "8/10 Cute", "11/10 Angelic",
-      "100/10 Queen", "Too adorable", "Unreal Beauty"
-    ];
-
-    const rating = gender === "FEMALE"
-      ? femaleRatings[Math.floor(Math.random() * femaleRatings.length)]
-      : maleRatings[Math.floor(Math.random() * maleRatings.length)];
-
-    const ageText =
-      `🌸 Your Age Details:\n` +
-      `──────────────\n` +
-      `🎂 Years: ${years} years\n` +
-      `🗓️ Months: ${months} months\n` +
-      `📅 Days: ${days} days\n` +
-      `📆 Total: ${totalDays} days | ${totalWeeks} weeks\n` +
-      `⏰ ${totalHours} hours | ${totalMinutes} minutes | ${totalSeconds} seconds\n` +
-      `──────────────\n` +
-      `🎉 Next Birthday in: ${daysLeft} days\n` +
-      `✨ Cute Rating: ${rating}`;
-
-    return api.sendMessage(ageText, threadID, messageID);
+    return api.sendMessage(response, threadID, messageID);
   }
 };
