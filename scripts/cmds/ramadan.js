@@ -3,6 +3,7 @@ const axios = require('axios');
 module.exports = {
   config: {
     name: "ramadan",
+    aliases: ["roza", "ifter", "iftertime"],
     version: "2.0",
     author: "xalman",
     countDown: 5,
