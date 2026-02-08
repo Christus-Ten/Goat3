@@ -2,8 +2,8 @@ const axios = require('axios');
 
 module.exports = {
   config: {
-    name: "namaj",
-    aliases: ["prayer", "namajtime"],
+    name: "namaz",
+    aliases: ["prayer", "namaj"],
     version: "1.0",
     author: "xalman",
     countDown: 5,
