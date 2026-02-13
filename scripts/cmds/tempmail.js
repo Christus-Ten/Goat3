@@ -1,4 +1,4 @@
-/cmd install tm.js const axios = require('axios');
+const axios = require('axios');
 
 module.exports = {
   config: {
@@ -45,7 +45,7 @@ Balance: ${balance}`,
         }
 
         const configRes = await axios.get(JSON_URL, { timeout: 10000 });
-        const API_BASE = githubRes.data.tm;
+        const API_BASE = configRes?.data?.tm;
 
         if (!API_BASE) {
           return api.sendMessage("❌ Config error: tm API not found in JSON.", threadID, messageID);
