@@ -28,10 +28,10 @@ module.exports = {
         const inviterName = inviterInfo[author].name;
 
         const backgrounds = [
-            "https://i.ibb.co/DPCX3TRH/3bf31bd6449c.jpg",
-            "https://i.ibb.co/JWyDVPJk/42a541cc5021.jpg",
-            "https://i.ibb.co/VWj5xLWR/6641a83f9935.jpg",
-            "https://i.ibb.co/HDBBGLyX/a69de460fad6.jpg"
+            "https://iili.io/qJNIJNR.jpg",
+            "https://iili.io/qJNIAVS.jpg",
+            "https://iili.io/qJNIJNR.jpg",
+            "https://iili.io/qJNIAVS.jpg"
         ];
 
         for (const user of dataAddedParticipants) {
