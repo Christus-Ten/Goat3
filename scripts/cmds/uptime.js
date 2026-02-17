@@ -41,8 +41,8 @@ module.exports = {
     const dateNow = moment.tz("Asia/Dhaka").format("DD/MM/YYYY");
 
     const gifLinks = [
-      "https://i.postimg.cc/NMc8xrFh/nx2.gif",
-      "https://i.postimg.cc/Cx5cZDBk/nx.gif"
+      "https://files.catbox.moe/20q0dn.gif",
+      "https://files.catbox.moe/20q0dn.gif"
     ];
     const randomGif = gifLinks[Math.floor(Math.random() * gifLinks.length)];
 
