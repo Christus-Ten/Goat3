@@ -43,7 +43,7 @@ module.exports = {
     } catch (err) {
       console.log(err);
       api.setMessageReaction("❌", event.messageID, () => {}, true);
-      return api.sendMessage("API সমস্যা!", event.threadID);
+      return api.sendMessage("", event.threadID);
     }
   },
 
