@@ -1,52 +1,81 @@
 const axios = require("axios");
-
-const baseApiUrl = async () => {
-  const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
-  return base.data.mahmud
-};
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
-  config: {
-    name: "say",
-    version: "1.7",
-    author: "MahMUD",
-    countDown: 5,
-    role: 0,
-    category: "media",
-    guide: "{pn} <text> (or reply to a message)",
-  },
+	config: {
+		name: "say",
+		version: "4.0",
+		author: "xalman",
+		countDown: 5,
+		role: 0,
+		shortDescription: "Reply supported TTS",
+		category: "fun"
+	},
 
-  onStart: async function ({ api, message, args, event }) {
-    let text = args.join(" ");
+	onStart: async function ({ message, args, event }) {
 
-    if (event.type === "message_reply" && event.messageReply.body) {
-      text = event.messageReply.body;
-    }
+		let text;
 
-    if (!text) {
-      return message.reply("⚠️ দয়া করে কিছু লিখুন বা একটি মেসেজে রিপ্লাই দিন!");
-    }
+		if (event.type === "message_reply" && event.messageReply.body) {
+			text = event.messageReply.body;
+		}
+		else if (args[0]) {
+			text = args.join(" ");
+		}
+		else {
+			return message.reply("⚠️ Please enter text or reply to a message.");
+		}
 
-    try {
-      const baseUrl = await baseApiUrl();
-      const response = await axios.get(`${baseUrl}/api/say`, {
-        params: { text },
-        headers: { "Author": module.exports.config.author },
-        responseType: "stream",
-      });
+		const maxLength = 180;
+		const parts = [];
+		const cacheDir = path.join(__dirname, "cache");
 
-      if (response.data.error) {
-        return message.reply(`❌ Error: ${response.data.error}`);
-      }
+		for (let i = 0; i < text.length; i += maxLength) {
+			parts.push(text.substring(i, i + maxLength));
+		}
 
-      message.reply({
-        body: "",
-        attachment: response.data,
-      });
+		const attachments = [];
+		const filePaths = [];
 
-    } catch (e) {
-      console.error("API Error:", e.response ? e.response.data : e.message);
-      message.reply("🐥 দুঃখিত, কিছু একটা সমস্যা হয়েছে!\n\nfix Author name\n" + (e.response?.data?.error || e.message));
-    }
-  },
+		try {
+			await fs.ensureDir(cacheDir);
+
+			for (let i = 0; i < parts.length; i++) {
+				const encoded = encodeURIComponent(parts[i]);
+				const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=bn&client=tw-ob`;
+
+				const filePath = path.join(cacheDir, `say_${i}_${Date.now()}.mp3`);
+				filePaths.push(filePath);
+
+				const response = await axios({
+					url,
+					method: "GET",
+					responseType: "stream"
+				});
+
+				const writer = fs.createWriteStream(filePath);
+				response.data.pipe(writer);
+
+				await new Promise((resolve) => writer.on("finish", resolve));
+
+				attachments.push(fs.createReadStream(filePath));
+			}
+
+			await message.reply({
+				body: `🔊 Voice generated (${parts.length} parts)`,
+				attachment: attachments
+			});
+
+			setTimeout(() => {
+				filePaths.forEach(file => {
+					if (fs.existsSync(file)) fs.unlinkSync(file);
+				});
+			}, 5000);
+
+		} catch (err) {
+			console.log(err);
+			return message.reply("❌ Failed to generate voice.");
+		}
+	}
 };
