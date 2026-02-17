@@ -7,35 +7,39 @@ module.exports = {
   config: {
     name: "pinterest",
     aliases: ["pin"],
-    version: "9.0.0",
+    version: "10.0",
     author: "xalman",
     role: 0,
     countDown: 5,
-    description: "Search to get pinterest Premium Grid , reply number to get full imgae ",
+    description: "Search Pinterest images and reply number to get full image",
     category: "image"
   },
 
   onStart: async function ({ api, event, args }) {
     const query = args.join(" ");
     if (!query)
-      return api.sendMessage(" Write something  example /pin cat....", event.threadID);
+      return api.sendMessage("Write something. Example: /pin cat", event.threadID);
 
     api.setMessageReaction("🕑", event.messageID, () => {}, true);
 
     try {
-      const githubRaw = "https://raw.githubusercontent.com/goatbotnx/Sexy-nx2.0Updated/refs/heads/main/nx-apis.json";
+      const githubRaw = "https://raw.githubusercontent.com/goatbotnx/Sexy-nx2.0Updated/main/nx-apis.json";
       const apiList = await axios.get(githubRaw);
       const baseUrl = apiList.data.pin;
 
-      const res = await axios.get(`${baseUrl}/search-img?query=${encodeURIComponent(query)}&type=json`);
-      const { data } = res.data;
+      const res = await axios.get(
+        `${baseUrl}/search-img?query=${encodeURIComponent(query)}&type=json`
+      );
 
-      if (!data || data.length === 0) {
+      const data = res.data?.data || [];
+
+      if (!data.length) {
         api.setMessageReaction("❌", event.messageID, () => {}, true);
-        return api.sendMessage("", event.threadID);
+        return api.sendMessage("No image found!", event.threadID);
       }
 
       const images = data.slice(0, 30);
+
       await sendGrid({ api, event, images, page: 0, query });
 
       api.setMessageReaction("✅", event.messageID, () => {}, true);
@@ -43,21 +47,20 @@ module.exports = {
     } catch (err) {
       console.log(err);
       api.setMessageReaction("❌", event.messageID, () => {}, true);
-      return api.sendMessage("", event.threadID);
+      return api.sendMessage("API Error!", event.threadID);
     }
   },
 
   onReply: async function ({ api, event, Reply }) {
     const { images, page, query } = Reply;
-    const input = event.body.toLowerCase();
+    const input = event.body.trim().toLowerCase();
 
     if (input === "next") {
-
       api.setMessageReaction("🕑", event.messageID, () => {}, true);
 
       const nextPage = page + 1;
       if (nextPage * 10 >= images.length)
-        return api.sendMessage("no more page....!", event.threadID);
+        return api.sendMessage("No more pages!", event.threadID);
 
       await sendGrid({ api, event, images, page: nextPage, query });
 
@@ -67,21 +70,29 @@ module.exports = {
 
     const num = parseInt(input);
     if (!isNaN(num) && num >= 1 && num <= 10) {
-
       api.setMessageReaction("🕑", event.messageID, () => {}, true);
 
       const index = page * 10 + (num - 1);
       if (!images[index])
-        return api.sendMessage("Image not found.", event.threadID);
+        return api.sendMessage("Image not found!", event.threadID);
 
-      const stream = (await axios.get(images[index], { responseType: "stream" })).data;
+      try {
+        const stream = await axios.get(images[index], {
+          responseType: "stream",
+          headers: {
+            "User-Agent": "Mozilla/5.0"
+          }
+        });
 
-      await api.sendMessage({
-        body: ` (${num})`,
-        attachment: stream
-      }, event.threadID);
+        await api.sendMessage({
+          body: `📌 ${query} (${num})`,
+          attachment: stream.data
+        }, event.threadID);
 
-      api.setMessageReaction("✅", event.messageID, () => {}, true);
+        api.setMessageReaction("✅", event.messageID, () => {}, true);
+      } catch (e) {
+        api.sendMessage("Failed to fetch image!", event.threadID);
+      }
     }
   }
 };
@@ -100,7 +111,12 @@ async function sendGrid({ api, event, images, page, query }) {
 
   for (let url of slice) {
     try {
-      const img = await loadImage(url);
+      const response = await axios.get(url, {
+        responseType: "arraybuffer",
+        headers: { "User-Agent": "Mozilla/5.0" }
+      });
+
+      const img = await loadImage(Buffer.from(response.data));
       const ratio = img.height / img.width;
       const newHeight = columnWidth * ratio;
 
@@ -143,7 +159,16 @@ async function sendGrid({ api, event, images, page, query }) {
 
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(x, y, columnWidth, height, 18);
+    ctx.moveTo(x + 18, y);
+    ctx.lineTo(x + columnWidth - 18, y);
+    ctx.quadraticCurveTo(x + columnWidth, y, x + columnWidth, y + 18);
+    ctx.lineTo(x + columnWidth, y + height - 18);
+    ctx.quadraticCurveTo(x + columnWidth, y + height, x + columnWidth - 18, y + height);
+    ctx.lineTo(x + 18, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - 18);
+    ctx.lineTo(x, y + 18);
+    ctx.quadraticCurveTo(x, y, x + 18, y);
+    ctx.closePath();
     ctx.clip();
     ctx.drawImage(img, x, y, columnWidth, height);
     ctx.restore();
@@ -172,12 +197,14 @@ async function sendGrid({ api, event, images, page, query }) {
   fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
 
   const msg = await api.sendMessage({
-    body: `📌 ${query}\nReply:\n• next ➜ Next Page\n• reply number➜ Full Image`,
+    body: `📌 ${query}\nReply:\n• next ➜ Next Page\n• reply number ➜ Full Image`,
     attachment: fs.createReadStream(filePath)
   }, event.threadID);
 
+  fs.unlinkSync(filePath);
+
   global.GoatBot.onReply.set(msg.messageID, {
-    commandName: "pin",
+    commandName: "pinterest",
     images,
     page,
     query
