@@ -1,30 +1,35 @@
 module.exports = {
   config: {
     name: "spam",
-    author: "kim/zed", // Fixed spelling
+    author: "xalman", //kim/zed
     role: 2,
-    shortDescription: "Spam messages safely with delay",
-    longDescription: "Send a message multiple times with a small delay to avoid rate limit.",
-    category: "sophia",
-    guide: "{pn} [amount] [message]"
+    shortDescription: "Repeat text sender",
+    longDescription: "Sends a selected message multiple times with a controlled interval.",
+    category: "system",
+    guide: "{pn} <count> <text>"
   },
 
   onStart: async function ({ api, event, args }) {
-    const amount = parseInt(args[0]);
-    const message = args.slice(1).join(" ");
 
-    if (isNaN(amount) || !message) {
-      return api.sendMessage("❌ ব্যবহার: /spam [amount] [message]", event.threadID);
+    const count = Number(args.shift());
+    const text = args.join(" ");
+
+    if (!count || !text) {
+      return api.sendMessage("❌ Usage: /spam <count> <text>", event.threadID);
     }
 
-    // limit to prevent abuse
-    if (amount > 50) {
-      return api.sendMessage("⚠️ সর্বোচ্চ 50 বার পর্যন্ত স্প্যাম করা যাবে!", event.threadID);
+    if (count < 1 || count > 100) {
+      return api.sendMessage("⚠️ Please choose a number between 1 and 100.", event.threadID);
     }
 
-    for (let i = 0; i < amount; i++) {
-      api.sendMessage(`${message}`, event.threadID);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // প্রতি 2 সেকেন্ডে পাঠাবে
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    let sent = 0;
+
+    while (sent < count) {
+      await api.sendMessage(text, event.threadID);
+      sent++;
+      await wait(180);
     }
-  },
+  }
 };
