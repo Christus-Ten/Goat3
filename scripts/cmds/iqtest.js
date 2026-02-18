@@ -104,9 +104,9 @@ const triviaList = [
 
 module.exports = {
   config: {
-    name: "brain",
-    aliases: [],
-    version: "1.0",
+    name: "iqtest",
+    aliases: ["iq"],
+    version: "3.0",
     author: "xalman",
     countDown: 5,
     role: 0,
