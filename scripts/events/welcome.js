@@ -1,96 +1,227 @@
+const {
+    createCanvas,
+    loadImage
+} = require('canvas');
+const fs = require('fs-extra');
+const path = require('path');
 const axios = require("axios");
-const { createCanvas, loadImage, registerFont } = require("canvas");
-const fs = require("fs-extra");
-const path = require("path");
+
+const backgroundImages = [
+    "https://i.imgur.com/XVRFwns.jpeg",
+    "https://i.imgur.com/DXXvgjb.png",
+    "https://i.imgur.com/LwoDuzZ.jpeg",
+    "https://i.imgur.com/mtSrSYh.jpeg",
+    "https://i.imgur.com/IVvEBc4.jpeg",
+    "https://i.imgur.com/uJcd1bf.jpeg"
+];
+
+const backgroundCache = new Map();
+
+async function loadBackgroundImage(url) {
+    if (backgroundCache.has(url)) return backgroundCache.get(url);
+
+    try {
+        const response = await axios.get(url, {
+            responseType: "arraybuffer",
+            headers: {
+                "User-Agent": "Mozilla/5.0"
+            }
+        });
+
+        const img = await loadImage(Buffer.from(response.data));
+        backgroundCache.set(url, img);
+        return img;
+
+    } catch (error) {
+        console.error("[WELCOME] Failed to load background:", url, error.message);
+        return null;
+    }
+}
+
+async function drawProfileImage(ctx, imageUrl, x, y, size, borderColor) {
+    const radius = size / 2;
+
+    try {
+        const response = await axios.get(imageUrl, {
+            responseType: "arraybuffer",
+            headers: { "User-Agent": "Mozilla/5.0" }
+        });
+
+        const img = await loadImage(Buffer.from(response.data));
+
+        ctx.shadowColor = borderColor;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+        ctx.fillStyle = borderColor;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = borderColor;
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        ctx.drawImage(img, x - radius, y - radius, size, size);
+        ctx.restore();
+
+        return true;
+
+    } catch (error) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#374151';
+        ctx.fill();
+
+        ctx.fillStyle = borderColor;
+        ctx.font = `bold ${radius * 0.6}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('U', x, y);
+        return false;
+    }
+}
+
+async function createWelcomeCard(gcImg, userImg, adderImg, userName, userNumber, threadName, adderName) {
+    const width = 1200;
+    const height = 700;
+
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    const selectedBackground = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+    console.log("[WELCOME] Using background:", selectedBackground);
+
+    const background = await loadBackgroundImage(selectedBackground);
+
+    if (background) {
+        ctx.drawImage(background, 0, 0, width, height);
+    } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, width, height);
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.fillRect(0, 0, width, height);
+    
+    await Promise.all([
+        drawProfileImage(ctx, gcImg, width / 2, 200, 200, "#ffffff"),
+    
+        drawProfileImage(ctx, userImg, 120, height - 100, 150, "#10b981"),
+    
+        drawProfileImage(ctx, adderImg, width - 120, 100, 150, "#3b82f6")
+    ]);
+
+    ctx.font = 'bold 36px "Segoe UI", Arial';
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.fillText(threadName, width / 2, 350);
+
+    const welcomeGradient = ctx.createLinearGradient(width/2 -180, 360, width/2 +180, 360);
+    welcomeGradient.addColorStop(0, "#3b82f6");
+    welcomeGradient.addColorStop(0.5, "#10b981");
+    welcomeGradient.addColorStop(1, "#ec4899");
+
+    ctx.font = 'bold 72px "Segoe UI", Arial';
+    ctx.fillStyle = welcomeGradient;
+    ctx.fillText("WELCOME", width / 2, 450);
+
+    ctx.strokeStyle = "#3b82f6";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - 150, 420);
+    ctx.lineTo(width / 2 + 150, 420);
+    ctx.stroke();
+
+    ctx.font = 'bold 48px "Segoe UI", Arial';
+    ctx.fillStyle = "#10b981";
+    ctx.fillText(userName, width / 2, 500);
+
+    ctx.font = 'bold 28px "Segoe UI", Arial';
+    ctx.fillStyle = "#e2e8f0";
+    ctx.fillText(`Member #${userNumber}`, width / 2, 585);
+    
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#10b981";
+    ctx.font = 'bold 26px "Segoe UI", Arial';
+    ctx.fillText(userName, 220, height - 95);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#3b82f6";
+    ctx.font = 'bold 22px "Segoe UI", Arial';
+    ctx.fillText(`Added by: ${adderName}`, width - 220, 105);
+
+    ctx.font = '18px "Segoe UI"';
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.fillText("©made by azadx69x", width - 10, height - 10);
+
+    return canvas.toBuffer();
+}
 
 module.exports = {
     config: {
         name: "welcome",
-        version: "5.0",
-        author: "xalman",
+        version: "1.0",
+        author: "Azadx69x",
         category: "events"
     },
 
-    onStart: async ({ threadsData, message, event, api }) => {
+    onStart: async ({ threadsData, event, message, usersData }) => {
         if (event.logMessageType !== "log:subscribe") return;
 
-        const { threadID, author } = event;
-        const dataAddedParticipants = event.logMessageData.addedParticipants;
+        try {
+            const threadID = event.threadID;
+            const addedUser = event.logMessageData.addedParticipants[0];
+            const addedUserId = addedUser.userFbId;
+            const adderId = event.author;
 
-        if (dataAddedParticipants.some((item) => item.userFbId == api.getCurrentUserID())) return;
+            const [threadInfo, userAvatar, adderAvatar, adderName] = await Promise.all([
+                threadsData.get(threadID),
+                usersData.getAvatarUrl(addedUserId),
+                usersData.getAvatarUrl(adderId),
+                usersData.getName(adderId)
+            ]);
 
-        const threadData = await threadsData.get(threadID);
-        const threadName = threadData.threadName || "Our Group";
-        const threadInfo = await api.getThreadInfo(threadID);
-        const memberCount = threadInfo.participantIDs.length;
-		
-        const inviterInfo = await api.getUserInfo(author);
-        const inviterName = inviterInfo[author].name;
+            const userName = addedUser.fullName;
+            const groupImage = threadInfo.imageSrc || 'https://i.imgur.com/7Qk8k6c.png';
+            const threadName = threadInfo.threadName || "Group";
+            const memberCount = threadInfo.members?.length || 1;
 
-        const backgrounds = [
-            "https://iili.io/qJNIJNR.jpg",
-            "https://iili.io/qJNIAVS.jpg",
-            "https://iili.io/qJNIJNR.jpg",
-            "https://iili.io/qJNIAVS.jpg"
-        ];
+            const imageBuffer = await createWelcomeCard(
+                groupImage,
+                userAvatar,
+                adderAvatar,
+                userName,
+                memberCount,
+                threadName,
+                adderName
+            );
 
-        for (const user of dataAddedParticipants) {
-            try {
-                const canvas = createCanvas(1000, 500);
-                const ctx = canvas.getContext("2d");
-                const bgLink = backgrounds[Math.floor(Math.random() * backgrounds.length)];
-                const background = await loadImage(bgLink);
-                ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-                ctx.roundRect(50, 50, 900, 400, 30);
-                ctx.fill();
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-                ctx.stroke();
+            const tempDir = path.join(__dirname, '..', '..', 'temp');
+            await fs.ensureDir(tempDir);
+            const tempPath = path.join(tempDir, `welcome_${Date.now()}.png`);
 
-                const userAvatarUrl = `https://graph.facebook.com/${user.userFbId}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-                const uAvatar = await loadImage(userAvatarUrl).catch(() => loadImage("https://i.imgur.com/6eSrt9al.png"));
+            fs.writeFileSync(tempPath, imageBuffer);
 
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(500, 180, 100, 0, Math.PI * 2);
-                ctx.lineWidth = 6;
-                ctx.strokeStyle = "#fff";
-                ctx.shadowColor = "#fff";
-                ctx.shadowBlur = 20;
-                ctx.stroke();
-                ctx.clip();
-                ctx.drawImage(uAvatar, 400, 80, 200, 200);
-                ctx.restore();
-                ctx.textAlign = "center";
-                ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-                ctx.shadowBlur = 10;
-				
-                const grad = ctx.createLinearGradient(400, 0, 600, 0);
-                grad.addColorStop(0, "#00d2ff");
-                grad.addColorStop(1, "#92fe9d");
-                
-                ctx.fillStyle = grad;
-                ctx.font = "bold 70px Impact, sans-serif"; 
-                ctx.fillText("WELCOME", 500, 330);
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "500 40px 'Segoe UI', Arial, sans-serif";
-                ctx.fillText(user.fullName, 500, 385);
-                ctx.font = "bold 22px Courier New";
-                ctx.fillStyle = "#FFCC00";
-                ctx.fillText(`YOU ARE THE #${memberCount} MEMBER|  INVITED BY: ${inviterName.toUpperCase()}`, 500, 430);
+            await message.reply({
+                body: `🌸 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 🌸\n━━━━━━━━━━━━━━━━━━━━━━\n🌷 𝐍𝐚𝐦𝐞: ${userName}\n🏷️ 𝐆𝐫𝐨𝐮𝐩: ${threadName}\n🔢 𝐌𝐞𝐦𝐛𝐞𝐫 #${memberCount}\n👤 𝐀𝐝𝐝𝐞𝐝 𝐛𝐲: ${adderName}\n━━━━━━━━━━━━━━━━━━━━━━\n𝐄𝐧𝐣𝐨𝐲 𝐲𝐨𝐮𝐫 𝐬𝐭𝐚𝐲! 😊`,
+                attachment: fs.createReadStream(tempPath)
+            });
 
-                const imgPath = path.join(__dirname, "cache", `w_${user.userFbId}.png`);
-                fs.writeFileSync(imgPath, canvas.toBuffer());
+            setTimeout(() => fs.existsSync(tempPath) && fs.unlinkSync(tempPath), 10000);
 
-                message.send({
-                    body: `🎉  welcome  ${user.fullName}!\n━━━━━━━━━━━━━━━━━━\n✨ Added by: ${inviterName}\n📊 You are the  ${memberCount} member`,
-                    attachment: fs.createReadStream(imgPath)
-                }, () => fs.unlinkSync(imgPath));
+        } catch (error) {
+            console.error("[Welcome error]:", error);
 
-            } catch (err) {
-                console.error(err);
-                message.send(`Welcome ${user.fullName}!`);
-            }
+            const addedUser = event.logMessageData.addedParticipants[0];
+            await message.send({
+                body: `🌸 𝐖𝐞𝐥𝐜𝐨𝐦𝐞 ${addedUser.fullName}! 🌸\n━━━━━━━━━━━━━━━━━━\n🌷 𝐓𝐨 𝐨𝐮𝐫 𝐠𝐫𝐨𝐮𝐩 𝐟𝐚𝐦𝐢𝐥𝐲!\n🌟 𝐖𝐞'𝐫𝐞 𝐞𝐱𝐜𝐢𝐭𝐞𝐝 𝐭𝐨 𝐡𝐚𝐯𝐞 𝐲𝐨𝐮!\n🎊 𝐏𝐥𝐞𝐚𝐬𝐞 𝐢𝐧𝐭𝐫𝐨𝐝𝐮𝐜𝐞 𝐲𝐨𝐮𝐫𝐬𝐞𝐥𝐟!\n━━━━━━━━━━━━━━━━━━\n𝐇𝐚𝐯𝐞 𝐟𝐮𝐧! 😊`
+            });
         }
     }
 };
